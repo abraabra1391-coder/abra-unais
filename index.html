@@ -183,13 +183,14 @@
     font-family:var(--script); font-weight:700; font-size:70px; line-height:1.05; letter-spacing:1px;
   }
 
-  /* ---------- VIDEO ---------- */
+  /* ---------- VIDEO & DOOR CANVAS ---------- */
   #videoStage{
     position:fixed; inset:0; z-index:50; max-width:480px; margin:0 auto;
     background:#100603; display:none;
   }
   @media (min-width:701px){ #videoStage{ top:28px; bottom:28px; height:auto; border-radius:6px; overflow:hidden; } }
-  #doorVideo{ width:100%; height:100%; object-fit:cover; display:block; }
+  #doorCanvas{ width:100%; height:100%; object-fit:cover; display:block; cursor:pointer; }
+  #doorVideo{ display:none; }
 
   /* ---------- SECTION shared ---------- */
   .page{
@@ -684,7 +685,8 @@
 
   <!-- VIDEO STAGE (shown while opening.mp4 plays) -->
   <section id="videoStage" aria-label="Door opening animation">
-    <video id="doorVideo" src="assets/opening.mp4" poster="assets/poster.jpg" playsinline preload="auto"></video>
+    <canvas id="doorCanvas"></canvas>
+    <video id="doorVideo" src="assets/opening.mp4" poster="assets/poster.jpg" playsinline preload="auto" muted></video>
   </section>
 
   <!-- MAIN STORY -->
@@ -1002,6 +1004,117 @@ const WEDDING_START = '2026-12-05T11:00:00+05:30';
     muteBtn.style.opacity = bgSong.muted ? '.55' : '1';
   });
 
+  const doorCanvas = document.getElementById('doorCanvas');
+  const doorCtx = doorCanvas ? doorCanvas.getContext('2d', { willReadFrequently: true }) : null;
+
+  // Pre-render the Abra & Mohammad Unais card for the opening door
+  const heroCardImg = new Image();
+  heroCardImg.src = 'assets/hero.png?v=5';
+  let heroPrepared = false;
+  let heroData = null;
+  let heroW = 0, heroH = 0;
+
+  function prepareHeroCanvas(w, h){
+    if(heroPrepared && heroW === w && heroH === h) return;
+    heroW = w; heroH = h;
+    const hc = document.createElement('canvas');
+    hc.width = w; hc.height = h;
+    const hctx = hc.getContext('2d');
+    hctx.drawImage(heroCardImg, 0, 0, w, h);
+
+    const cx = w / 2;
+    const scale = w / 941;
+
+    hctx.textAlign = 'center';
+    hctx.textBaseline = 'middle';
+
+    // Subtitle
+    hctx.font = `600 ${Math.round(22 * scale)}px Montserrat, sans-serif`;
+    hctx.fillStyle = '#6b5847';
+    hctx.fillText('TO THE WEDDING OF', cx, h * 0.355);
+
+    // Abra
+    hctx.font = `italic 600 ${Math.round(86 * scale)}px 'Cormorant Garamond', serif`;
+    hctx.fillStyle = '#5c1020';
+    hctx.shadowColor = 'rgba(255,255,255,0.6)';
+    hctx.shadowBlur = 4;
+    hctx.fillText('Abra', cx, h * 0.405);
+
+    // &
+    hctx.font = `italic 500 ${Math.round(54 * scale)}px 'Cormorant Garamond', serif`;
+    hctx.fillStyle = '#c6a15b';
+    hctx.shadowBlur = 0;
+    hctx.fillText('&', cx, h * 0.445);
+
+    // Mohammad Unais
+    hctx.font = `italic 600 ${Math.round(84 * scale)}px 'Cormorant Garamond', serif`;
+    hctx.fillStyle = '#5c1020';
+    hctx.shadowColor = 'rgba(255,255,255,0.6)';
+    hctx.shadowBlur = 4;
+    hctx.fillText('Mohammad Unais', cx, h * 0.490);
+
+    // Divider
+    drawDoorDivider(hctx, cx, h * 0.535, 180 * scale);
+
+    // 5
+    hctx.font = `600 ${Math.round(92 * scale)}px 'Cormorant Garamond', serif`;
+    hctx.fillStyle = '#5c1020';
+    hctx.shadowBlur = 3;
+    hctx.fillText('5', cx, h * 0.575);
+
+    // DECEMBER 2026
+    hctx.font = `600 ${Math.round(25 * scale)}px Montserrat, sans-serif`;
+    hctx.fillStyle = '#6b5847';
+    hctx.shadowBlur = 0;
+    hctx.fillText('DECEMBER 2026', cx, h * 0.615);
+
+    // 11:00 AM – 3:00 PM
+    hctx.font = `italic 500 ${Math.round(23 * scale)}px Montserrat, sans-serif`;
+    hctx.fillStyle = '#6b5847';
+    hctx.fillText('11:00 AM – 3:00 PM', cx, h * 0.640);
+
+    // Divider
+    drawDoorDivider(hctx, cx, h * 0.665, 180 * scale);
+
+    // LIVE CONVENTION CENTER
+    hctx.font = `700 ${Math.round(25 * scale)}px Montserrat, sans-serif`;
+    hctx.fillStyle = '#5c1020';
+    hctx.fillText('LIVE CONVENTION CENTER', cx, h * 0.690);
+
+    // Kozhichana
+    hctx.font = `500 ${Math.round(23 * scale)}px Montserrat, sans-serif`;
+    hctx.fillStyle = '#6b5847';
+    hctx.fillText('Kozhichana', cx, h * 0.715);
+
+    // Divider
+    drawDoorDivider(hctx, cx, h * 0.738, 180 * scale);
+
+    // Quote
+    hctx.font = `italic 500 ${Math.round(24 * scale)}px 'Cormorant Garamond', serif`;
+    hctx.fillStyle = '#6b5847';
+    hctx.fillText('Together in faith, towards forever.', cx, h * 0.760);
+
+    heroData = hctx.getImageData(0, 0, w, h).data;
+    heroPrepared = true;
+  }
+
+  function drawDoorDivider(ctx, cx, y, halfW){
+    ctx.save();
+    ctx.strokeStyle = '#c6a15b';
+    ctx.fillStyle = '#c6a15b';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx - halfW, y);
+    ctx.lineTo(cx - 12, y);
+    ctx.moveTo(cx + 12, y);
+    ctx.lineTo(cx + halfW, y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(cx, y, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
   let entered = false;
   function enterStory(){
     videoStage.style.display = 'none';
@@ -1017,6 +1130,69 @@ const WEDDING_START = '2026-12-05T11:00:00+05:30';
     requestAnimationFrame(function(){ requestAnimationFrame(sizeCanvas); });
   }
 
+  function renderDoorFrame(){
+    if(!opened || entered) return;
+    if(video.paused || video.ended){
+      if(video.ended) enterStory();
+      return;
+    }
+
+    if(video.currentTime > 2.8){
+      enterStory();
+      return;
+    }
+
+    const vw = video.videoWidth || 720;
+    const vh = video.videoHeight || 1280;
+    if(doorCanvas.width !== vw || doorCanvas.height !== vh){
+      doorCanvas.width = vw;
+      doorCanvas.height = vh;
+      prepareHeroCanvas(vw, vh);
+    }
+    if(!heroPrepared) prepareHeroCanvas(vw, vh);
+
+    const w = doorCanvas.width;
+    const h = doorCanvas.height;
+
+    doorCtx.drawImage(video, 0, 0, w, h);
+
+    if(heroData){
+      const frame = doorCtx.getImageData(0, 0, w, h);
+      const data = frame.data;
+      const hData = heroData;
+
+      const xMin = Math.floor(w * 0.18);
+      const xMax = Math.floor(w * 0.82);
+      const yMin = Math.floor(h * 0.32);
+      const yMax = Math.floor(h * 0.80);
+
+      for(let y = yMin; y < yMax; y++){
+        const rowOffset = y * w * 4;
+        for(let x = xMin; x < xMax; x++){
+          const idx = rowOffset + (x * 4);
+          const r = data[idx];
+          const g = data[idx + 1];
+          const b = data[idx + 2];
+          const bri = (r * 2 + g * 3 + b) / 6;
+
+          if(bri > 150){
+            data[idx] = hData[idx];
+            data[idx + 1] = hData[idx + 1];
+            data[idx + 2] = hData[idx + 2];
+          } else if(bri > 120){
+            const f = (bri - 120) / 30;
+            data[idx] = Math.round(data[idx] * (1 - f) + hData[idx] * f);
+            data[idx + 1] = Math.round(data[idx + 1] * (1 - f) + hData[idx + 1] * f);
+            data[idx + 2] = Math.round(data[idx + 2] * (1 - f) + hData[idx + 2] * f);
+          }
+        }
+      }
+      doorCtx.putImageData(frame, 0, 0);
+    }
+
+    requestAnimationFrame(renderDoorFrame);
+  }
+
   let opened = false;
   openBtn.addEventListener('click', function(){
     if(opened) return; opened = true;
@@ -1024,13 +1200,16 @@ const WEDDING_START = '2026-12-05T11:00:00+05:30';
     videoStage.style.display = 'block';
     video.currentTime = 0;
     playSong();
+
     if(video.error){ enterStory(); return; }
     const p = video.play();
     if(p && p.catch){ p.catch(function(){ enterStory(); }); }
+    requestAnimationFrame(renderDoorFrame);
   });
 
   video.addEventListener('ended', enterStory);
   video.addEventListener('error', function(){ if(opened) enterStory(); });
+  if(doorCanvas) doorCanvas.addEventListener('click', enterStory);
 
   /* ---------- map link ---------- */
   (function(){
